@@ -41,6 +41,8 @@ class AmqpListenerActor(implicit system: ActorSystem, ex: ExecutionContext, publ
           userProfileService.getUserProfileById(amqpMessage)
         case UserProfileCore.GetUserProfileRoomsRequest.routingKey =>
           userProfileService.getUserProfileRooms(amqpMessage)
+        case UserProfileCore.GetUserProfileGatewayResponse.routingKey =>
+          userProfileService.createUserProfile(amqpMessage)
         case _ =>
           log.info("something else")
       }
