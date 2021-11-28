@@ -77,23 +77,6 @@ object Boot extends App with Serializers{
     "mounty-messages.user-profile-core.#"
   )
 
-  RabbitMQConnection.declareExchange(
-    channel,
-    "X:mounty-spotify-gateway-in",
-    "topic"
-  ) match {
-    case Success(value) => system.log.info("succesfully declared exchange")
-    case Failure(exception) => system.log.warning(s"couldn't declare exchange ${exception.getMessage}")
-  }
-
-  RabbitMQConnection.declareAndBindQueue(
-    channel,
-    "Q:mounty-spotify-gateway-queue",
-    "X:mounty-spotify-gateway-in",
-    "mounty-messages.spotify-gateway.#"
-  )
-
-
   RabbitMQConnection.declareAndBindQueue(
     channel,
     "Q:mounty-user-profile-core-queue",
