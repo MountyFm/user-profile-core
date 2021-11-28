@@ -30,7 +30,7 @@ class AmqpListenerActor(implicit system: ActorSystem, ex: ExecutionContext, publ
 
       amqpMessage.routingKey match {
         case UserProfileCore.Ping.routingKey =>
-          publisher ! AMQPMessage(amqpMessage.entity, MountyApi.Pong.routingKey, amqpMessage.actorPath )
+          publisher ! AMQPMessage(amqpMessage.entity, MountyApi.Pong.routingKey, amqpMessage.actorPath, "X:mounty-api-out" )
         case UserProfileCore.CreateUserProfileRequest.routingKey =>
           userProfileService.createUserProfile(amqpMessage)
         case UserProfileCore.UpdateUserProfileRequest.routingKey =>
