@@ -104,4 +104,5 @@ object Boot extends App with Serializers{
   implicit val userProfileService = new UserProfileService()
   val listener: ActorRef = system.actorOf(AmqpListenerActor.props())
   channel.basicConsume("Q:mounty-user-profile-core-queue", AmqpConsumer(listener))
+  channel.basicConsume("Q:mounty-spotify-gateway-queue", AmqpConsumer(listener))
 }
