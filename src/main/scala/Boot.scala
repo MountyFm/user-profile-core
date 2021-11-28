@@ -77,15 +77,10 @@ object Boot extends App with Serializers{
     "mounty-messages.user-profile-core.#"
   )
 
-  RabbitMQConnection.declareAndBindQueue(
-    channel,
-    "Q:mounty-user-profile-core-queue",
-    "X:mounty-api-in",
-    "mounty-messages.user-profile-core.#"
-  )
+
   implicit val publisher: ActorRef = system.actorOf(AmqpPublisherActor.props(channel))
   implicit val userProfileService = new UserProfileService()
   val listener: ActorRef = system.actorOf(AmqpListenerActor.props())
   channel.basicConsume("Q:mounty-user-profile-core-queue", AmqpConsumer(listener))
-  channel.basicConsume("Q:mounty-spotify-gateway-queue", AmqpConsumer(listener))
+//  channel.basicConsume("Q:mounty-spotify-gateway-queue", AmqpConsumer(listener))
 }
