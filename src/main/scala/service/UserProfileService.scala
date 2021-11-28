@@ -5,7 +5,7 @@ import kz.mounty.fm.amqp.messages.AMQPMessage
 import kz.mounty.fm.amqp.messages.MountyMessages.MountyApi
 import kz.mounty.fm.domain.requests._
 import kz.mounty.fm.domain.room.Room
-import kz.mounty.fm.domain.user.{RoomUser, UserProfile}
+import kz.mounty.fm.domain.user.{RoomUser, RoomUserType, UserProfile}
 import kz.mounty.fm.exceptions.{ErrorCodes, ErrorSeries, ServerErrorRequestException}
 import org.json4s.Formats
 import org.json4s.jackson.Serialization._
@@ -121,5 +121,16 @@ class UserProfileService(implicit userProfileCollection: MongoCollection[UserPro
         val reply = write(error)
         publisher ! message.copy(entity = reply, routingKey = MountyApi.Error.routingKey)
     }
+  }
+
+  def getUserProfileRooms(message: AMQPMessage): Unit = {
+    val requestEntity = parse(message.entity).extract[GetUserProfileByIdRequestBody]
+    (for {
+      roomUser <- roomUserRepository.findByFilter[RoomUser](equal("profileId", requestEntity.id))
+      rooms <- roomRepository.findAllByFilter[Room](equal("id", roomUser.get.roomId))
+    } yield {
+      val reply = write(GetUserProfileRoomsResponseBody(rooms))
+      publisher ! message.copy(entity = reply, routingKey = MountyApi.GetUserProfileRoomsResponse.routingKey)
+    })
   }
 }

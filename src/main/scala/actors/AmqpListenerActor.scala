@@ -39,6 +39,8 @@ class AmqpListenerActor(implicit system: ActorSystem, ex: ExecutionContext, publ
           userProfileService.deleteUserProfile(amqpMessage)
         case UserProfileCore.GetUserProfileByIdRequest.routingKey =>
           userProfileService.getUserProfileById(amqpMessage)
+        case UserProfileCore.GetUserProfileRoomsRequest.routingKey =>
+          userProfileService.getUserProfileRooms(amqpMessage)
         case _ =>
           log.info("something else")
       }
