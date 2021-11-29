@@ -5,8 +5,8 @@ import kz.mounty.fm.amqp.messages.AMQPMessage
 import kz.mounty.fm.amqp.messages.MountyMessages.{MountyApi, SpotifyGateway, UserProfileCore}
 import kz.mounty.fm.domain.requests._
 import kz.mounty.fm.domain.room.Room
-import kz.mounty.fm.domain.user.{RoomUser, RoomUserType, UserProfile}
-import kz.mounty.fm.exceptions.{ErrorCodes, ErrorSeries, ServerErrorRequestException}
+import kz.mounty.fm.domain.user.{RoomUser, UserProfile}
+import kz.mounty.fm.exceptions.{ErrorCodes, ErrorSeries, ExceptionInfo, ServerErrorRequestException}
 import org.json4s.Formats
 import org.json4s.jackson.Serialization._
 import org.json4s.native.JsonMethods._
@@ -48,26 +48,36 @@ class UserProfileService(implicit userProfileCollection: MongoCollection[UserPro
             val error = ServerErrorRequestException(
               ErrorCodes.INTERNAL_SERVER_ERROR(ErrorSeries.USER_PROFILE_CORE),
               Some(exception.getMessage)
-            )
+            ).getExceptionInfo
             val reply = write(error)
             publisher ! message.copy(entity = reply, routingKey = MountyApi.Error.routingKey, exchange =  "X:mounty-api-out")
         }
       case UserProfileCore.GetUserProfileGatewayResponse.routingKey =>
-        val requestEntity = parse(message.entity).extract[GetUserProfileGatewayResponseBody]
-        userProfileRepository.create[UserProfile](requestEntity.userProfile).onComplete {
-          case Success(value) =>
-            val reply = write(CreateUserProfileResponseBody(value))
-            publisher ! message.copy(entity = reply, routingKey = MountyApi.CreateUserProfileResponse.routingKey, exchange = "X:mounty-api-out")
-          case Failure(exception) =>
-            val error = ServerErrorRequestException(
-              ErrorCodes.INTERNAL_SERVER_ERROR(ErrorSeries.USER_PROFILE_CORE),
-              Some(exception.getMessage)
-            )
-            val reply = write(error)
-            publisher ! message.copy(entity = reply, routingKey = MountyApi.Error.routingKey, exchange =  "X:mounty-api-out")
+        (for {
+          body <- Future(parse(message.entity).extract[GetUserProfileGatewayResponseBody])
+          result <- userProfileRepository.create[UserProfile](body.userProfile)
+        } yield
+          publisher ! message.copy(
+            entity = write(CreateUserProfileResponseBody(result)),
+            routingKey = MountyApi.CreateUserProfileResponse.routingKey,
+            exchange = "X:mounty-api-out")
+          ) recover {
+          case exception: Throwable =>
+            exception match {
+              case _: org.json4s.MappingException =>
+                val exceptionInfo = parse(message.entity).extract[ExceptionInfo]
+                val reply = write(exceptionInfo)
+                publisher ! message.copy(entity = reply, routingKey = MountyApi.Error.routingKey, exchange = "X:mounty-api-out")
+              case _ =>
+                val error = ServerErrorRequestException(
+                  ErrorCodes.INTERNAL_SERVER_ERROR(ErrorSeries.USER_PROFILE_CORE),
+                  Some(exception.getMessage)
+                ).getExceptionInfo
+                val reply = write(error)
+                publisher ! message.copy(entity = reply, routingKey = MountyApi.Error.routingKey, exchange = "X:mounty-api-out")
+            }
         }
     }
-
   }
 
   def updateUserProfile(message: AMQPMessage): Unit = {
@@ -95,7 +105,7 @@ class UserProfileService(implicit userProfileCollection: MongoCollection[UserPro
           val error = ServerErrorRequestException(
             ErrorCodes.INTERNAL_SERVER_ERROR(ErrorSeries.USER_PROFILE_CORE),
             Some(exception.getMessage)
-          )
+          ).getExceptionInfo
           val reply = write(error)
           publisher ! message.copy(entity = reply, routingKey = MountyApi.Error.routingKey, exchange =  "X:mounty-api-out")
       }
@@ -115,7 +125,7 @@ class UserProfileService(implicit userProfileCollection: MongoCollection[UserPro
         val error = ServerErrorRequestException(
           ErrorCodes.INTERNAL_SERVER_ERROR(ErrorSeries.USER_PROFILE_CORE),
           Some(exception.getMessage)
-        )
+        ).getExceptionInfo
         val reply = write(error)
         publisher ! message.copy(entity = reply, routingKey = MountyApi.Error.routingKey, exchange =  "X:mounty-api-out")
     }
@@ -133,7 +143,7 @@ class UserProfileService(implicit userProfileCollection: MongoCollection[UserPro
             val error = ServerErrorRequestException(
               ErrorCodes.INTERNAL_SERVER_ERROR(ErrorSeries.USER_PROFILE_CORE),
               Some("Entity not found")
-            )
+            ).getExceptionInfo
             val reply = write(error)
             publisher ! message.copy(entity = reply, routingKey = MountyApi.Error.routingKey, exchange =  "X:mounty-api-out")
         }
@@ -141,7 +151,7 @@ class UserProfileService(implicit userProfileCollection: MongoCollection[UserPro
         val error = ServerErrorRequestException(
           ErrorCodes.INTERNAL_SERVER_ERROR(ErrorSeries.USER_PROFILE_CORE),
           Some(exception.getMessage)
-        )
+        ).getExceptionInfo
         val reply = write(error)
         publisher ! message.copy(entity = reply, routingKey = MountyApi.Error.routingKey, exchange =  "X:mounty-api-out")
     }
@@ -160,7 +170,7 @@ class UserProfileService(implicit userProfileCollection: MongoCollection[UserPro
         val error = ServerErrorRequestException(
           ErrorCodes.INTERNAL_SERVER_ERROR(ErrorSeries.USER_PROFILE_CORE),
           Some(e.getMessage)
-        )
+        ).getExceptionInfo
         val reply = write(error)
         publisher ! message.copy(entity = reply, routingKey = MountyApi.Error.routingKey, exchange =  "X:mounty-api-out")
     }
