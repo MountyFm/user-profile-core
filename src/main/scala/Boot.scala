@@ -79,7 +79,7 @@ object Boot extends App with Serializers{
 
   RabbitMQConnection.declareExchange(
     channel,
-    "X:spotify-gateway-out",
+    "X:mounty-spotify-gateway-out",
     "topic"
   ) match {
     case Success(value) => system.log.info("succesfully declared exchange")
@@ -89,7 +89,7 @@ object Boot extends App with Serializers{
   RabbitMQConnection.declareAndBindQueue(
     channel,
     "Q:mounty-user-profile-core-response-queue",
-    "X:spotify-gateway-out",
+    "X:mounty-spotify-gateway-out",
     "mounty-messages.user-profile-core.#"
   )
 
