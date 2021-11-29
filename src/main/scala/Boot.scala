@@ -72,14 +72,14 @@ object Boot extends App with Serializers{
 
   RabbitMQConnection.declareAndBindQueue(
     channel,
-    "Q:mounty-user-profile-core-queue",
+    "Q:mounty-user-profile-core-request-queue",
     "X:mounty-api-in",
     "mounty-messages.user-profile-core.#"
   )
 
   RabbitMQConnection.declareExchange(
     channel,
-    "X:spotify-gateway-in",
+    "X:spotify-gateway-out",
     "topic"
   ) match {
     case Success(value) => system.log.info("succesfully declared exchange")
@@ -88,8 +88,8 @@ object Boot extends App with Serializers{
 
   RabbitMQConnection.declareAndBindQueue(
     channel,
-    "Q:mounty-spotify-gateway-queue",
-    "X:spotify-gateway-in",
+    "Q:mounty-user-profile-core-response-queue",
+    "X:spotify-gateway-out",
     "mounty-messages.user-profile-core.#"
   )
 
@@ -97,6 +97,6 @@ object Boot extends App with Serializers{
   implicit val publisher: ActorRef = system.actorOf(AmqpPublisherActor.props(channel))
   implicit val userProfileService = new UserProfileService()
   val listener: ActorRef = system.actorOf(AmqpListenerActor.props())
-  channel.basicConsume("Q:mounty-user-profile-core-queue", AmqpConsumer(listener))
-  channel.basicConsume("Q:mounty-spotify-gateway-queue", AmqpConsumer(listener))
+  channel.basicConsume("Q:mounty-user-profile-core-request-queue", AmqpConsumer(listener))
+  channel.basicConsume("Q:mounty-user-profile-core-response-queue", AmqpConsumer(listener))
 }
